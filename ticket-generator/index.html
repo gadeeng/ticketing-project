@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 
-  <!-- Firebase SDK -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
   <script type="module" src="firebase.js"></script>
 </head>
 <body>
@@ -157,26 +157,45 @@
           </div>
         </div>
 
-        <!-- BATCH -->
-        <div class="sp-section-title">BATCH GENERATE</div>
+        <!-- PEMESANAN GRUP -->
+        <div class="sp-section-title">PESANAN</div>
 
-        <div class="input-group">
-          <label class="input-label">
-            Jumlah Tiket — <span id="batch-val" class="batch-val-display">1</span>
-          </label>
-          <input type="range" id="inp-batch" min="1" max="50" value="1"
-                 oninput="document.getElementById('batch-val').textContent=this.value"/>
-          <div class="range-labels"><span>1</span><span>10</span><span>25</span><span>50</span></div>
+        <!-- Mode toggle -->
+        <div class="order-mode-tabs">
+          <button class="order-tab active" id="tab-single" onclick="switchOrderMode('single')">
+            🎟️ TIKET TUNGGAL
+          </button>
+          <button class="order-tab" id="tab-group" onclick="switchOrderMode('group')">
+            👥 PESAN BANYAK
+          </button>
+        </div>
+
+        <!-- MODE TUNGGAL -->
+        <div id="mode-single">
+          <p class="order-mode-desc">Data pengunjung dari form di atas akan digunakan.</p>
+        </div>
+
+        <!-- MODE GRUP -->
+        <div id="mode-group" style="display:none">
+          <p class="order-mode-desc">Tambahkan data setiap anggota grup. Data kontak & tanggal mengikuti form utama.</p>
+          <div class="group-list" id="group-list">
+            <!-- Row anggota ditambahkan JS -->
+          </div>
+          <button class="sp-btn add-member-btn" onclick="addGroupMember()">
+            + TAMBAH ANGGOTA
+          </button>
+          <div class="group-summary" id="group-summary">
+            <span id="group-count">0</span> anggota &nbsp;·&nbsp;
+            <span id="group-ft-count">0</span> Fast Track &nbsp;·&nbsp;
+            <span id="group-reg-count">0</span> Regular
+          </div>
         </div>
 
         <!-- ACTIONS -->
         <div class="sp-section-title">AKSI</div>
 
-        <button class="sp-btn primary" onclick="generateSingle()">
-          🎟️ &nbsp;GENERATE TIKET TUNGGAL
-        </button>
-        <button class="sp-btn success" onclick="generateBatch()">
-          ⚡ &nbsp;BATCH GENERATE
+        <button class="sp-btn primary" onclick="handleGenerate()">
+          🎟️ &nbsp;<span id="btn-generate-lbl">GENERATE TIKET</span>
         </button>
         <div class="btn-row-2">
           <button class="sp-btn amber-btn" onclick="exportCSV()">📥 EXPORT CSV</button>

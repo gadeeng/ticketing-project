@@ -25,6 +25,10 @@ let tickets      = [];   // master list of all generated tickets
 let batchNumber  = 1;    // current batch counter
 let previewTicket = null; // ticket currently shown in preview
 
+// Group order state
+let orderMode    = 'single';   // 'single' | 'group'
+let groupMembers = [];         // [{ name, fastTrack }]
+
 /* ────────────────────────────────────────────────────────────
    RANDOM DATA POOLS (for batch generate)
 ──────────────────────────────────────────────────────────── */
@@ -192,6 +196,112 @@ function setFieldError(errId, inputId, msg) {
 /* ────────────────────────────────────────────────────────────
    GENERATE SINGLE
 ──────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────
+   ORDER MODE SWITCH
+──────────────────────────────────────────────────────────── */
+function switchOrderMode(mode) {
+  orderMode = mode;
+
+  document.getElementById('tab-single').classList.toggle('active', mode === 'single');
+  document.getElementById('tab-group').classList.toggle('active', mode === 'group');
+  document.getElementById('mode-single').style.display = mode === 'single' ? '' : 'none';
+  document.getElementById('mode-group').style.display  = mode === 'group'  ? '' : 'none';
+
+  // Label tombol generate
+  document.getElementById('btn-generate-lbl').textContent =
+    mode === 'single' ? 'GENERATE TIKET' : `GENERATE ${groupMembers.length || 0} TIKET GRUP`;
+}
+
+/* ────────────────────────────────────────────────────────────
+   GROUP MEMBERS
+──────────────────────────────────────────────────────────── */
+function addGroupMember() {
+  // Default FT ikut pilihan form utama
+  const defaultFT = document.getElementById('inp-fasttrack').value === 'true';
+  groupMembers.push({ name: '', fastTrack: defaultFT });
+  renderGroupList();
+}
+
+function removeGroupMember(idx) {
+  groupMembers.splice(idx, 1);
+  renderGroupList();
+}
+
+function updateMemberName(idx, val) {
+  groupMembers[idx].name = val.trim();
+  updateGroupSummary();
+  updateGenerateLabel();
+}
+
+function toggleMemberFT(idx) {
+  groupMembers[idx].fastTrack = !groupMembers[idx].fastTrack;
+  renderGroupList();
+}
+
+function renderGroupList() {
+  const list = document.getElementById('group-list');
+  list.innerHTML = '';
+
+  if (groupMembers.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:20px 0;color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:1px">
+      — Belum ada anggota. Klik "+ TAMBAH ANGGOTA" —
+    </div>`;
+    updateGroupSummary();
+    updateGenerateLabel();
+    return;
+  }
+
+  groupMembers.forEach((m, i) => {
+    const row = document.createElement('div');
+    row.className = 'member-row';
+    row.innerHTML = `
+      <div class="member-name-wrap">
+        <span class="member-num">ANGGOTA ${i + 1}</span>
+        <input class="sp-input" type="text" placeholder="Nama lengkap..."
+               value="${escHtml(m.name)}"
+               oninput="updateMemberName(${i}, this.value)"/>
+      </div>
+      <label class="member-ft-toggle ${m.fastTrack ? 'ft-on' : ''}" onclick="toggleMemberFT(${i})">
+        ${m.fastTrack ? '⚡ FT' : '🎟️ REG'}
+      </label>
+      <button class="member-del-btn" onclick="removeGroupMember(${i})">✕</button>
+    `;
+    list.appendChild(row);
+  });
+
+  updateGroupSummary();
+  updateGenerateLabel();
+}
+
+function updateGroupSummary() {
+  const total = groupMembers.length;
+  const ft    = groupMembers.filter(m => m.fastTrack).length;
+  document.getElementById('group-count').textContent    = total;
+  document.getElementById('group-ft-count').textContent = ft;
+  document.getElementById('group-reg-count').textContent = total - ft;
+}
+
+function updateGenerateLabel() {
+  if (orderMode !== 'group') return;
+  const n = groupMembers.length;
+  document.getElementById('btn-generate-lbl').textContent =
+    n > 0 ? `GENERATE ${n} TIKET GRUP` : 'GENERATE TIKET GRUP';
+}
+
+/* ────────────────────────────────────────────────────────────
+   HANDLE GENERATE — dispatch ke single atau group
+──────────────────────────────────────────────────────────── */
+function handleGenerate() {
+  if (orderMode === 'single') {
+    generateSingle();
+  } else {
+    generateGroup();
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   GENERATE SINGLE
+──────────────────────────────────────────────────────────── */
 function generateSingle() {
   if (!validateForm()) {
     showToast('error', '⚠️', 'Lengkapi form terlebih dahulu!');
@@ -214,27 +324,69 @@ function generateSingle() {
 }
 
 /* ────────────────────────────────────────────────────────────
-   BATCH GENERATE (random data)
+   GENERATE GROUP — satu tiket per anggota
+──────────────────────────────────────────────────────────── */
+function generateGroup() {
+  if (!validateForm()) {
+    showToast('error', '⚠️', 'Lengkapi data kontak di form utama terlebih dahulu!');
+    return;
+  }
+
+  if (groupMembers.length === 0) {
+    showToast('error', '⚠️', 'Tambahkan minimal 1 anggota grup!');
+    return;
+  }
+
+  // Validasi nama anggota
+  const emptyNames = groupMembers.filter(m => !m.name).length;
+  if (emptyNames > 0) {
+    showToast('error', '⚠️', `Lengkapi nama untuk semua ${emptyNames} anggota!`);
+    return;
+  }
+
+  const phone    = '+62 ' + document.getElementById('inp-phone').value.trim();
+  const email    = document.getElementById('inp-email').value.trim();
+  const date     = document.getElementById('inp-date').value;
+  const newBatch = ++batchNumber;
+  const generated = [];
+
+  groupMembers.forEach(m => {
+    const t = createTicket({
+      name:      m.name,
+      phone,
+      email,
+      date,
+      fastTrack: m.fastTrack,
+      batchNo:   newBatch,
+    });
+    tickets.push(t);
+    generated.push(t);
+  });
+
+  // Preview tiket terakhir
+  updatePreview(generated[generated.length - 1]);
+  renderTable();
+  updateStats();
+
+  const ftCount  = generated.filter(t => t.fastTrack).length;
+  const regCount = generated.length - ftCount;
+  showToast('success', '👥',
+    `${generated.length} tiket grup digenerate! (${ftCount} FT · ${regCount} REG) — Batch #${newBatch}`
+  );
+}
+
+/* ────────────────────────────────────────────────────────────
+   BATCH GENERATE (random data) — dipertahankan untuk internal
 ──────────────────────────────────────────────────────────── */
 function generateBatch() {
-  const n       = parseInt(document.getElementById('inp-batch').value) || 1;
-  const date    = document.getElementById('inp-date').value || new Date().toISOString().slice(0, 10);
-
+  const n    = parseInt(document.getElementById('inp-batch')?.value) || 1;
+  const date = document.getElementById('inp-date').value || new Date().toISOString().slice(0, 10);
   batchNumber++;
-
   for (let i = 0; i < n; i++) {
     const isFT = Math.random() < 0.25;
     const name = NAMES_POOL[Math.floor(Math.random() * NAMES_POOL.length)];
-    tickets.push(createTicket({
-      name,
-      phone:     '+62 ' + randomPhone().slice(1),
-      email:     randomEmail(name),
-      date,
-      fastTrack: isFT,
-      batchNo:   batchNumber,
-    }));
+    tickets.push(createTicket({ name, phone: '+62 ' + randomPhone().slice(1), email: randomEmail(name), date, fastTrack: isFT, batchNo: batchNumber }));
   }
-
   const last = tickets[tickets.length - 1];
   updatePreview(last);
   renderTable();
@@ -266,6 +418,11 @@ function rerollPreview() {
 function updatePreview(t) {
   previewTicket = t;
   document.getElementById('ticket-preview').innerHTML = renderTicketHTML(t);
+
+  // Re-render semua barcode SVG yang sudah di-inject ke DOM
+  // (JsBarcode perlu elemen SVG yang sudah ada di DOM)
+  refreshBarcodes();
+
   document.getElementById('preview-id').value = t.id;
 
   // Show chips
@@ -273,6 +430,25 @@ function updatePreview(t) {
   chips.style.display = 'flex';
   document.getElementById('chip-fasttrack').textContent = t.fastTrack ? '⚡ FAST TRACK' : '🎟️ REGULAR';
   document.getElementById('chip-fasttrack').className   = 'chip ' + (t.fastTrack ? 'chip-amber' : '');
+}
+
+/* Jalankan ulang JsBarcode pada semua .barcode-svg di DOM */
+function refreshBarcodes() {
+  document.querySelectorAll('.barcode-svg[data-ticket-id]').forEach(svg => {
+    const id = svg.getAttribute('data-ticket-id');
+    if (!id || typeof JsBarcode === 'undefined') return;
+    try {
+      JsBarcode(svg, id, {
+        format:      'CODE128',
+        lineColor:   '#38bdf8',
+        background:  'transparent',
+        width:       1.8,
+        height:      48,
+        displayValue: false,
+        margin:      0,
+      });
+    } catch(e) { console.warn('refreshBarcodes:', e); }
+  });
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -342,7 +518,6 @@ function renderTicketHTML(t) {
         ${buildBarcodeSVG(t.id)}
         <div class="ticket-id-text">${t.id}</div>
       </div>
-      <div class="ticket-qr">${buildQRPatternSVG(t.id)}</div>
     </div>
 
     <div class="ticket-footer">
@@ -353,60 +528,32 @@ function renderTicketHTML(t) {
 }
 
 /* ────────────────────────────────────────────────────────────
-   BARCODE SVG BUILDER
+   BARCODE 1D BUILDER — JsBarcode (Code 128, bisa discan)
 ──────────────────────────────────────────────────────────── */
 function buildBarcodeSVG(id) {
-  const seed = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const W = 200, H = 44;
-  let bars = '';
-  let x = 0, idx = 0;
-  const heights = [38, 44, 32, 40, 28, 44, 36, 32, 40, 44, 36, 32, 40, 36, 44];
-
-  while (x < W) {
-    const thick = ((seed * (idx + 1) * 13) % 3) + 1;
-    const gap   = ((seed * (idx + 3) * 7)  % 3) + 1;
-    const h     = heights[idx % heights.length];
-    const col   = idx % 4 === 0
-      ? 'rgba(56,189,248,0.95)'
-      : 'rgba(56,189,248,0.45)';
-    bars += `<rect x="${x}" y="${(H - h) / 2}" width="${thick}" height="${h}" fill="${col}"/>`;
-    x += thick + gap;
-    idx++;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'barcode-svg');
+  svg.setAttribute('data-ticket-id', id);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  try {
+    JsBarcode(svg, id, {
+      format:       'CODE128',
+      lineColor:    '#38bdf8',
+      background:   'transparent',
+      width:        1.8,
+      height:       48,
+      displayValue: false,
+      margin:       0,
+    });
+    return svg.outerHTML;
+  } catch (e) {
+    console.warn('JsBarcode error:', e);
+    // Kembalikan SVG placeholder dengan data-ticket-id agar bisa di-refresh nanti
+    return `<svg class="barcode-svg" data-ticket-id="${id}" preserveAspectRatio="xMidYMid meet"
+      viewBox="0 0 200 48" xmlns="http://www.w3.org/2000/svg">
+      <text x="100" y="28" text-anchor="middle" fill="#475569" font-size="9" font-family="monospace">Memuat barcode...</text>
+    </svg>`;
   }
-
-  return `<svg class="barcode-svg" viewBox="0 0 ${W} ${H}"
-    preserveAspectRatio="xMidYMid meet"
-    xmlns="http://www.w3.org/2000/svg">${bars}</svg>`;
-}
-
-/* ────────────────────────────────────────────────────────────
-   QR CODE PATTERN SVG (visual only)
-──────────────────────────────────────────────────────────── */
-function buildQRPatternSVG(id) {
-  const seed = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const S = 7;   // cell size px
-  const N = 9;   // grid size
-  let cells = '';
-
-  for (let r = 0; r < N; r++) {
-    for (let c = 0; c < N; c++) {
-      const fill = ((seed * (r * N + c + 1) * 31) % 3 === 0) ? '#000' : '#fff';
-      cells += `<rect x="${c * S + 1}" y="${r * S + 1}" width="${S - 1}" height="${S - 1}" fill="${fill}"/>`;
-    }
-  }
-
-  // Corner finder patterns (3 corners)
-  const marker = (ox, oy) =>
-    `<rect x="${ox}" y="${oy}" width="${3 * S}" height="${3 * S}" fill="#000"/>` +
-    `<rect x="${ox + S}" y="${oy + S}" width="${S}" height="${S}" fill="#fff"/>`;
-
-  cells += marker(1, 1) + marker(N * S - 3 * S + 1, 1) + marker(1, N * S - 3 * S + 1);
-
-  const dim = N * S + 2;
-  return `<svg width="${dim}" height="${dim}" xmlns="http://www.w3.org/2000/svg">
-    <rect width="${dim}" height="${dim}" fill="#fff" rx="2"/>
-    ${cells}
-  </svg>`;
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -708,6 +855,9 @@ function formatDate(dateStr) {
   // Set regular as default selected type
   document.getElementById('type-regular').classList.add('active');
 
+  // Init group list (tampilkan placeholder kosong)
+  renderGroupList();
+
   // Load any previously saved tickets
   await loadFromStorage();
 
@@ -728,6 +878,13 @@ function formatDate(dateStr) {
 ──────────────────────────────────────────────────────────── */
 window.generateSingle  = generateSingle;
 window.generateBatch   = generateBatch;
+window.handleGenerate  = handleGenerate;
+window.generateGroup   = generateGroup;
+window.switchOrderMode = switchOrderMode;
+window.addGroupMember  = addGroupMember;
+window.removeGroupMember = removeGroupMember;
+window.updateMemberName  = updateMemberName;
+window.toggleMemberFT    = toggleMemberFT;
 window.rerollPreview   = rerollPreview;
 window.setFastTrack    = setFastTrack;
 window.saveToStorage   = saveToStorage;
@@ -740,3 +897,4 @@ window.previewRow      = previewRow;
 window.deleteRow       = deleteRow;
 window.formatPhone     = formatPhone;
 window.renderTable     = renderTable;
+window.refreshBarcodes = refreshBarcodes;
