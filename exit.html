@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+
+<html lang="id">
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;800;900&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>DUFAN — Exit Counter</title>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp }                         from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
+import { getDatabase, ref, set, get, onValue }   from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js';
+
+const firebaseConfig = {
+  apiKey:            'AIzaSyDZohweBiGofXFd2HD-VH5w3BsUc2zaFqc',
+  authDomain:        'ticketing-project-3bcf6.firebaseapp.com',
+  databaseURL:       'https://ticketing-project-3bcf6-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId:         'ticketing-project-3bcf6',
+  storageBucket:     'ticketing-project-3bcf6.firebasestorage.app',
+  messagingSenderId: '682939255204',
+  appId:             '1:682939255204:web:65d2ba7efb2baf665c5931',
+};
+
+const _app = initializeApp(firebaseConfig);
+const _db  = getDatabase(_app);
+
+window._fbSet    = (path, data) => set(ref(_db, path), data);
+window._fbGet    = async (path) => { const s = await get(ref(_db, path)); return s.exists() ? s.val() : null; };
+window._fbListen = (path, cb)   => onValue(ref(_db, path), s => cb(s.exists() ? s.val() : null));
+window._fbReady  = true;
+document.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<link href="css/shared.css" rel="stylesheet"/><link href="css/exit.css" rel="stylesheet"/></head>
+<body>
+<div class="toast" id="toast"><span id="t-icon">✅</span><span id="t-msg">—</span></div>
+<div class="full-banner" id="full-banner">⛔   WAHANA PENUH — AKSES KELUAR SAJA</div>
+<!-- TOPBAR -->
+<div class="topbar">
+<div class="topbar-left">
+<a class="back-btn" href="index.html">← HOME</a>
+<div class="topbar-title">🚪 DUFAN  <span>EXIT COUNTER</span></div>
+</div>
+<div class="topbar-right">
+<div class="live-dot"></div>
+<div class="topbar-time" id="topbar-time">—</div>
+</div>
+</div>
+<!-- ══ SCREEN 1: PICKER ══ -->
+<div class="screen" id="screen-pick">
+<div class="pick-eyebrow">// PINTU KELUAR · WAHANA BERKELANJUTAN</div>
+<div class="pick-title">PILIH WAHANA</div>
+<div class="pick-sub">Halaman ini digunakan oleh petugas pintu keluar</div>
+<div class="pick-cards" id="pick-cards">
+<!-- diisi JS -->
+</div>
+</div>
+<!-- ══ SCREEN 2: EXIT COUNTER ══ -->
+<div class="screen" id="screen-exit">
+<!-- Wahana bar -->
+<div class="exit-wahana-bar">
+<div>
+<div class="ew-name" id="ew-name">—</div>
+<div class="ew-sub" id="ew-sub">—</div>
+</div>
+<button class="change-btn" onclick="changePicker()">↩ Ganti</button>
+</div>
+<!-- Occupancy -->
+<div class="occ-card">
+<div class="occ-eyebrow">ORANG DI DALAM WAHANA</div>
+<div class="occ-fraction">
+<div class="occ-inside" id="occ-inside" style="color:var(--green)">0</div>
+<div class="occ-sep">/</div>
+<div class="occ-cap" id="occ-cap">—</div>
+</div>
+<div class="occ-bar-bg"><div class="occ-bar" id="occ-bar" style="width:0%;background:var(--green)"></div></div>
+<div class="occ-row">
+<span id="occ-slot">Slot tersedia: —</span>
+<span id="occ-pct">0%</span>
+</div>
+<div class="occ-status" id="occ-status" style="border-color:var(--green);color:var(--green)">TERSEDIA</div>
+</div>
+<!-- Counter cards -->
+<div class="counter-row">
+<div class="counter-card">
+<div class="counter-num" id="c-in" style="color:var(--green)">0</div>
+<div class="counter-lbl">TOTAL MASUK</div>
+</div>
+<div class="counter-card">
+<div class="counter-num" id="c-out" style="color:var(--amber)">0</div>
+<div class="counter-lbl">TOTAL KELUAR</div>
+</div>
+</div>
+<!-- EXIT BUTTON -->
+<div class="exit-btn-wrap">
+<button class="btn-exit" id="btn-exit" onclick="doExit()">
+<div class="btn-exit-inner">
+<div class="btn-exit-icon">🚪</div>
+<div class="btn-exit-label">KETUK SAAT KELUAR</div>
+<div class="btn-exit-sub">Tekan setiap kali 1 pengunjung melewati pintu ini</div>
+</div>
+<div class="btn-flash" id="btn-flash"></div>
+</button>
+<div class="cooldown-ring" id="cooldown-ring">⏳ TUNGGU...</div>
+</div>
+</div>
+
+<script defer="defer" src="js/exit.js"></script></body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+
+<html lang="id">
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;800;900&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DUFAN — Peta Wahana &amp; Status Antrian</title>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
+import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js';
+const cfg = {
+  apiKey:            'AIzaSyDZohweBiGofXFd2HD-VH5w3BsUc2zaFqc',
+  authDomain:        'ticketing-project-3bcf6.firebaseapp.com',
+  databaseURL:       'https://ticketing-project-3bcf6-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId:         'ticketing-project-3bcf6',
+  storageBucket:     'ticketing-project-3bcf6.firebasestorage.app',
+  messagingSenderId: '682939255204',
+  appId:             '1:682939255204:web:65d2ba7efb2baf665c5931',
+  measurementId:     'G-HME323VPJZ',
+};
+
+const app = initializeApp(cfg);
+const db  = getDatabase(app);
+window._fbListen = (path, cb) => onValue(ref(db, path), s => cb(s.exists() ? s.val() : null));
+window._fbReady = true;
+document.dispatchEvent(new Event('firebase-ready'));
+</script>
+
+<link href="css/shared.css" rel="stylesheet"/><link href="css/map.css" rel="stylesheet"/></head>
+<body>
+<div class="toast" id="toast"><span id="t-icon">🔥</span><span id="t-msg">—</span></div>
+<!-- TOPBAR -->
+<div class="sim-topbar">
+<a class="sim-back-btn" href="index.html">← HOME</a>
+<div class="sim-topbar-center">
+<div class="sim-topbar-dot"></div>
+<div class="sim-topbar-title">🎢 DUFAN  <span>PETA WAHANA</span></div>
+</div>
+<div class="topbar-right">
+<span id="topbar-time">—</span>
+<div class="topbar-pill">● REALTIME</div>
+</div>
+</div>
+<div class="app">
+<div class="page-header">
+<div class="page-eyebrow">// PETA INTERAKTIF &amp; STATUS ANTRIAN REALTIME — DUFAN ANCOL</div>
+<div class="page-title">PETA WAHANA DUFAN</div>
+<div class="page-subtitle">Hover wahana untuk detail antrian · Data update otomatis via Firebase Realtime DB</div>
+</div>
+<div class="stats-bar">
+<div class="stat-card"><div class="stat-num cyan" id="s-total">0</div><div class="stat-label">Total Antrian</div></div>
+<div class="stat-card"><div class="stat-num green" id="s-low">0</div><div class="stat-label">Wahana Normal</div></div>
+<div class="stat-card"><div class="stat-num amber" id="s-med">0</div><div class="stat-label">Wahana Ramai</div></div>
+<div class="stat-card"><div class="stat-num red" id="s-high">0</div><div class="stat-label">Sangat Padat</div></div>
+</div>
+<div class="legend">
+<span class="legend-title">LEGENDA:</span>
+<div class="legend-item"><span class="legend-dot" style="background:#22c55e;color:#22c55e"></span><span style="color:#22c55e">NORMAL</span><span style="color:var(--muted);font-size:8px"> &lt;30%</span></div>
+<div class="legend-item"><span class="legend-dot" style="background:#fbbf24;color:#fbbf24"></span><span style="color:#fbbf24">RAMAI</span><span style="color:var(--muted);font-size:8px"> 30–70%</span></div>
+<div class="legend-item"><span class="legend-dot" style="background:#ef4444;color:#ef4444"></span><span style="color:#ef4444">PADAT</span><span style="color:var(--muted);font-size:8px"> &gt;70%</span></div>
+<div class="legend-item"><span class="legend-dot" style="background:#38bdf8;color:#38bdf8"></span><span style="color:#38bdf8">ENTRANCE</span></div>
+<div class="legend-item"><span class="legend-dot" style="background:#64748b;color:#64748b"></span><span style="color:#64748b">Belum di scanner</span></div>
+<span id="last-update-lbl">— menunggu Firebase —</span>
+</div>
+<!-- MAP -->
+<div class="map-wrap" id="map-wrap">
+<div class="map-badge"><span class="badge-dot"></span>DUFAN ANCOL · JAKARTA · LIVE MAP</div>
+<canvas id="map-canvas"></canvas>
+<!-- Tooltip -->
+<div class="map-tooltip" id="map-tooltip">
+<div class="tt-name" id="tt-name">—</div>
+<div class="tt-count" id="tt-count" style="color:#22c55e">0</div>
+<div class="tt-count-lbl" id="tt-count-lbl">ORANG DALAM ANTRIAN</div>
+<div class="tt-bar-bg"><div class="tt-bar" id="tt-bar" style="width:0%;background:#22c55e"></div></div>
+<div class="tt-row"><span id="tt-wait">—</span><span id="tt-cap">—</span></div>
+<div class="tt-status" id="tt-status" style="border-color:#22c55e;color:#22c55e">NORMAL</div>
+<hr class="tt-divider"/>
+<div class="tt-info-grid">
+<div class="tt-info-item"><div class="tt-info-lbl">JAM BUKA</div><div class="tt-info-val" id="tt-open">—</div></div>
+<div class="tt-info-item"><div class="tt-info-lbl">JAM TUTUP</div><div class="tt-info-val" id="tt-close">—</div></div>
+<div class="tt-info-item"><div class="tt-info-lbl">FAST TRACK</div><div class="tt-info-val" id="tt-ft">—</div></div>
+<div class="tt-info-item"><div class="tt-info-lbl">MIN. TINGGI</div><div class="tt-info-val" id="tt-height">—</div></div>
+<div class="tt-info-item"><div class="tt-info-lbl">JENIS</div><div class="tt-info-val" id="tt-type">—</div></div>
+<div class="tt-info-item"><div class="tt-info-lbl">DURASI</div><div class="tt-info-val" id="tt-duration">—</div></div>
+</div>
+</div>
+</div>
+<div class="map-footer">© 2025 DUFAN ANCOL · SISTEM TIKET ELEKTRONIK · DATA DIPERBARUI REALTIME VIA FIREBASE</div>
+</div>
+
+<script defer="defer" src="js/map.js"></script></body>
+</html>

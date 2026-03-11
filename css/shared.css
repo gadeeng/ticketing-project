@@ -1,0 +1,150 @@
+/* ================================================================
+   DUFAN — shared.css
+   Variables, reset, body, grid-bg, topbar, toast, animations
+================================================================ */
+
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --bg:        #080f1c;
+  --panel:     rgba(12, 20, 38, 0.92);
+  --card:      rgba(8, 14, 28, 0.95);
+  --border:    rgba(45, 212, 191, 0.16);
+  --teal:      #2dd4bf;
+  --teal-dim:  rgba(45, 212, 191, 0.10);
+  --indigo:    #818cf8;
+  --green:     #4ade80;
+  --green-dim: rgba(74, 222, 128, 0.10);
+  --amber:     #fbbf24;
+  --amber-dim: rgba(251, 191, 36, 0.10);
+  --red:       #f87171;
+  --red-dim:   rgba(248, 113, 113, 0.10);
+  --text:      #e8edf5;
+  --muted:     #556070;
+  --mono:      'IBM Plex Mono', monospace;
+  --title:     'Raleway', sans-serif;
+  --body:      'DM Sans', sans-serif;
+}
+
+html, body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  overflow-x: hidden;
+}
+
+/* ── Dot grid background ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(circle, rgba(45, 212, 191, 0.09) 1px, transparent 1px);
+  background-size: 36px 36px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Subtle vignette ── */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse 100% 80% at 50% 0%, rgba(45, 212, 191, 0.04) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; height: 52px;
+  background: rgba(8, 15, 28, 0.97);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+}
+
+.topbar-left {
+  display: flex; align-items: center; gap: 12px;
+}
+
+.back-btn {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+  color: var(--teal); background: var(--teal-dim);
+  border: 1px solid rgba(45, 212, 191, 0.28);
+  border-radius: 6px; padding: 6px 14px;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.15s, border-color 0.15s;
+}
+.back-btn:hover {
+  background: rgba(45, 212, 191, 0.18);
+  border-color: rgba(45, 212, 191, 0.55);
+}
+
+.topbar-title {
+  font-family: var(--title);
+  font-size: 13px; font-weight: 800;
+  letter-spacing: 2px; color: var(--text);
+}
+.topbar-title span { color: var(--teal); }
+
+.topbar-right {
+  display: flex; align-items: center; gap: 8px;
+}
+
+.tb-pill {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 1.5px;
+  padding: 5px 12px; border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03); color: var(--muted);
+}
+.tb-pill.active {
+  border-color: rgba(74, 222, 128, 0.35);
+  color: var(--green); background: var(--green-dim);
+}
+.tb-pill.teal {
+  border-color: rgba(45, 212, 191, 0.35);
+  color: var(--teal); background: var(--teal-dim);
+}
+
+.topbar-time {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--muted); letter-spacing: 1px;
+}
+
+.live-dot, .sim-topbar-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green); box-shadow: 0 0 6px var(--green);
+  animation: livePulse 2.4s ease-in-out infinite;
+}
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 2000;
+  background: rgba(12, 20, 38, 0.98);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  border-radius: 10px; padding: 11px 18px;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+  max-width: 320px;
+  transform: translateY(90px); opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.34, 1.4, 0.64, 1), opacity 0.28s ease;
+  pointer-events: none;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: rgba(74, 222, 128, 0.35); color: var(--green); }
+.toast.error   { border-color: rgba(248, 113, 113, 0.35); color: var(--red); }
+.toast.warning { border-color: rgba(251, 191, 36, 0.35); color: var(--amber); }
+
+/* ── COMMON ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
