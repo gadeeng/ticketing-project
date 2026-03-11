@@ -1130,3 +1130,41 @@ td.td-email { color: #94a3b8; font-size: 11px; }
 .ticket-barcode-section { display: none; }
 .barcode-svg            { display: none; }
 .ticket-id-text         { display: none; }
+/* ── QTY CONTROLS ── */
+.qty-btn {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  border: 1px solid rgba(56,189,248,0.3);
+  background: rgba(56,189,248,0.08);
+  color: #38bdf8;
+  font-size: 18px; font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, border-color .15s;
+  flex-shrink: 0;
+}
+.qty-btn:hover {
+  background: rgba(56,189,248,0.18);
+  border-color: rgba(56,189,248,0.6);
+}
+.qty-input {
+  width: 64px !important;
+  text-align: center;
+  font-family: var(--mono, monospace);
+  font-size: 16px !important;
+  padding: 8px 4px !important;
+}
+.qty-label {
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  color: #38bdf8;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.field-hint {
+  font-size: 10px;
+  color: var(--muted, #64748b);
+  font-family: var(--mono, monospace);
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+}

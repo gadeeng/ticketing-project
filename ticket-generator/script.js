@@ -198,19 +198,31 @@ function generateSingle() {
     return;
   }
 
-  const t = createTicket({
+  const qty      = Math.min(20, Math.max(1, parseInt(document.getElementById('inp-qty')?.value) || 1));
+  const baseOpts = {
     name:      document.getElementById('inp-name').value.trim(),
     phone:     '+62 ' + document.getElementById('inp-phone').value.trim(),
     email:     document.getElementById('inp-email').value.trim(),
     date:      document.getElementById('inp-date').value,
     fastTrack: document.getElementById('inp-fasttrack').value === 'true',
-  });
+  };
 
-  tickets.push(t);
-  updatePreview(t);
+  const generated = [];
+  for (let i = 0; i < qty; i++) {
+    const t = createTicket({ ...baseOpts });
+    tickets.push(t);
+    generated.push(t);
+  }
+
+  updatePreview(generated[generated.length - 1]);
   renderTable();
   updateStats();
-  showToast('success', '🎟️', `Tiket ${t.id} berhasil digenerate!`);
+
+  if (qty === 1) {
+    showToast('success', '🎟️', `Tiket ${generated[0].id} berhasil digenerate!`);
+  } else {
+    showToast('success', '🎟️', `${qty} tiket berhasil digenerate untuk ${baseOpts.name}!`);
+  }
 }
 
 /* ────────────────────────────────────────────────────────────
@@ -727,6 +739,28 @@ function formatDate(dateStr) {
    sehingga onclick="..." di HTML tidak bisa menemukannya.
    Solusi: daftarkan semua fungsi yang dipanggil dari HTML.
 ──────────────────────────────────────────────────────────── */
+/* ────────────────────────────────────────────────────────────
+   QTY HELPERS
+──────────────────────────────────────────────────────────── */
+function changeQty(delta) {
+  const inp = document.getElementById('inp-qty');
+  if (!inp) return;
+  let v = Math.min(20, Math.max(1, (parseInt(inp.value) || 1) + delta));
+  inp.value = v;
+  updateQtyLabel(v);
+}
+
+function clampQty(inp) {
+  let v = Math.min(20, Math.max(1, parseInt(inp.value) || 1));
+  inp.value = v;
+  updateQtyLabel(v);
+}
+
+function updateQtyLabel(v) {
+  const lbl = document.getElementById('qty-label');
+  if (lbl) lbl.textContent = v + ' tiket';
+}
+
 window.generateSingle  = generateSingle;
 window.generateBatch   = generateBatch;
 window.rerollPreview   = rerollPreview;
@@ -740,5 +774,7 @@ window.copyId          = copyId;
 window.previewRow      = previewRow;
 window.deleteRow       = deleteRow;
 window.formatPhone     = formatPhone;
+window.changeQty       = changeQty;
+window.clampQty        = clampQty;
 window.renderTable     = renderTable;
 window.refreshBarcodes = refreshBarcodes;

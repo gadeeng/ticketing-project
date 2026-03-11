@@ -117,6 +117,18 @@
           <input class="sp-input" id="inp-date" type="date"/>
         </div>
 
+        <!-- JUMLAH TIKET -->
+        <div class="input-group" style="margin-top:4px">
+          <label class="input-label" for="inp-qty">Jumlah Tiket <span class="required">*</span></label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button type="button" class="qty-btn" onclick="changeQty(-1)">−</button>
+            <input class="sp-input qty-input" id="inp-qty" type="number" min="1" max="20" value="1" oninput="clampQty(this)"/>
+            <button type="button" class="qty-btn" onclick="changeQty(1)">+</button>
+            <span class="qty-label" id="qty-label">1 tiket</span>
+          </div>
+          <div class="field-hint">Maks. 20 tiket per pemesanan</div>
+        </div>
+
         <!-- FAST TRACK TOGGLE -->
         <div class="sp-section-title">TIPE TIKET</div>
 
@@ -131,7 +143,7 @@
             <div class="type-icon">⚡</div>
             <div class="type-name">FAST TRACK</div>
             <div class="type-desc">Antrian prioritas</div>
-            <div class="type-price">+Rp 50.000</div>
+            <div class="type-price">+Rp 500.000</div>
           </div>
         </div>
 
