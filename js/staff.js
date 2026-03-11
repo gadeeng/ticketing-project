@@ -1,4 +1,3 @@
-
 /* ============================================================
    DATA
 ============================================================ */
@@ -50,7 +49,7 @@ let totalScan=0, validScan=0, invalidScan=0;
 // Camera
 let camStream   = null;
 let camFacing   = 'environment';
-let camInterval = null;
+let quaggaRunning = false;
 let cooldown    = false;
 let camScanned  = 0;
 
@@ -65,7 +64,18 @@ let mulaiTotalSecs= 0;
 const getStatus  = (n,c) => { const r=n/c; return r<.3?'low':r<.7?'medium':'high'; };
 const getColor   = s => ({low:'#22c55e',medium:'#fbbf24',high:'#ef4444'}[s]||'#22c55e');
 const getLabel   = s => ({low:'ANTRIAN NORMAL',medium:'ANTRIAN RAMAI',high:'ANTRIAN SANGAT PADAT'}[s]||'—');
-const getWait    = n => { const m=Math.round(n*.8); return m<5?'Langsung masuk':`~${m} menit`; };
+const TURNOVER   = 0.5; // menit loading/unloading
+const parseDurasi = s => { if(!s||s==='-') return 0; const m=String(s).match(/[\d.]+/); return m?parseFloat(m[0]):0; };
+const getWait    = (n, wahana) => {
+  if (!wahana) { const m=Math.round(n*.8); return m<5?'Langsung masuk':`~${m} menit`; }
+  const durasi = parseDurasi(wahana.durasi);
+  const cap    = wahana.cap || 1;
+  if (durasi === 0) return n < 5 ? 'Langsung masuk' : `~${Math.round(n*0.8)} menit`;
+  const raw = (n / cap) * durasi + TURNOVER;
+  if (raw < 1) return 'Langsung masuk';
+  const mins = Math.round(raw);
+  return mins >= 60 ? `~${Math.floor(mins/60)}j ${mins%60}m` : `~${mins} menit`;
+};
 const nowStr     = () => [new Date().getHours(),new Date().getMinutes(),new Date().getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');
 const isOpen     = w => {
   const toNum = s => { if(!s||s==='-') return null; const [h,m]=s.split('.').map(Number); return h*100+(m||0); };
@@ -289,7 +299,7 @@ function updateQueueDisplay() {
 
     document.getElementById('qh-bar').style.width      = pct + '%';
     document.getElementById('qh-bar').style.background = col;
-    document.getElementById('qh-wait').textContent     = `Estimasi tunggu: ${getWait(n)}`;
+    document.getElementById('qh-wait').textContent     = `Estimasi tunggu: ${getWait(n, curWahana)}`;
     document.getElementById('qh-cap').textContent      = `Kapasitas: ${curWahana.cap}`;
 
     const st = document.getElementById('qh-status');
@@ -506,77 +516,141 @@ async function processManual() {
 }
 
 /* ============================================================
-   CAMERA
+   CAMERA — QuaggaJS (Barcode 1D + QR fallback)
 ============================================================ */
-async function startCamera() {
+function startCamera() {
   if (!curWahana) { showToast('error','⚠️','Pilih wahana sebelum mengaktifkan kamera!'); return; }
-  try {
-    if (camStream) stopCamera();
-    camStream = await navigator.mediaDevices.getUserMedia({
-      video:{ facingMode:camFacing, width:{ideal:1280}, height:{ideal:720} }
-    });
+  if (quaggaRunning) return;
+
+  // Pastikan Quagga sudah loaded
+  if (typeof Quagga === 'undefined') {
+    showToast('error','🚫','Library Quagga belum dimuat — refresh halaman');
+    return;
+  }
+
+  Quagga.init({
+    inputStream: {
+      name: 'Live',
+      type: 'LiveStream',
+      target: document.getElementById('cam-video').parentElement,
+      constraints: {
+        facingMode: camFacing,
+        width:  { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    },
+    locator: { patchSize: 'medium', halfSample: true },
+    numOfWorkers: navigator.hardwareConcurrency > 2 ? 2 : 1,
+    frequency: 10,
+    decoder: {
+      // Format barcode 1D yang umum dipakai di gelang tiket
+      readers: [
+        'code_128_reader',   // paling umum untuk tiket
+        'code_39_reader',
+        'ean_13_reader',
+        'ean_8_reader',
+        'upc_reader',
+        'codabar_reader',
+        'i2of5_reader',
+      ],
+    },
+    locate: true,
+  }, err => {
+    if (err) {
+      let m = 'Gagal mengakses kamera';
+      if (String(err).includes('Permission')) m = 'Izin kamera ditolak — aktifkan di pengaturan browser';
+      if (String(err).includes('device'))     m = 'Kamera tidak ditemukan';
+      showToast('error','🚫', m);
+      console.error('Quagga init error:', err);
+      return;
+    }
+    Quagga.start();
+    quaggaRunning = true;
+
+    // Sembunyikan elemen video bawaan — Quagga buat sendiri
     const v = document.getElementById('cam-video');
-    v.srcObject = camStream; await v.play();
+    if (v) v.style.display = 'none';
+
     document.getElementById('cam-dot').classList.remove('off');
-    document.getElementById('cam-txt').textContent = 'AKTIF — MENDETEKSI QR / BARCODE...';
+    document.getElementById('cam-txt').textContent = 'AKTIF — MENDETEKSI BARCODE GELANG...';
     document.getElementById('btn-start').style.display = 'none';
     document.getElementById('btn-stop').style.display  = '';
     document.getElementById('btn-flip').style.display  = '';
     document.getElementById('scan-line').style.animationPlayState = 'running';
-    camInterval = setInterval(scanFrame, 180);
-    showToast('success','📷','Kamera aktif');
-  } catch(e) {
-    let m = 'Gagal mengakses kamera';
-    if (e.name==='NotAllowedError') m='Izin kamera ditolak — aktifkan di pengaturan browser';
-    if (e.name==='NotFoundError')   m='Kamera tidak ditemukan';
-    showToast('error','🚫',m);
-  }
+    showToast('success','📷','Kamera aktif — siap scan barcode gelang');
+  });
+
+  // Handler hasil deteksi barcode
+  Quagga.onDetected(result => {
+    const code = result?.codeResult?.code;
+    if (code) onScanDetect(code);
+  });
+
+  // Gambar kotak deteksi barcode di canvas overlay
+  Quagga.onProcessed(result => {
+    const cvs = document.getElementById('cam-canvas');
+    const drawCtx = cvs && cvs.getContext('2d');
+    if (!drawCtx || !result) return;
+    drawCtx.clearRect(0, 0, cvs.width, cvs.height);
+    if (result.boxes) {
+      result.boxes.filter(b => b !== result.box).forEach(box => {
+        Quagga.ImageDebug.drawPath(box, {x:0,y:1}, drawCtx, {color:'rgba(56,189,248,0.3)', lineWidth:2});
+      });
+    }
+    if (result.box) {
+      Quagga.ImageDebug.drawPath(result.box, {x:0,y:1}, drawCtx, {color:'#38bdf8', lineWidth:2});
+    }
+    if (result.codeResult?.code) {
+      Quagga.ImageDebug.drawPath(result.line, {x:'x',y:'y'}, drawCtx, {color:'#22c55e', lineWidth:3});
+    }
+  });
 }
 
 function stopCamera() {
+  if (quaggaRunning && typeof Quagga !== 'undefined') {
+    Quagga.stop();
+    quaggaRunning = false;
+  }
   if (camStream) { camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
-  clearInterval(camInterval);
-  const v=document.getElementById('cam-video'); if(v) v.srcObject=null;
+
+  // Tampilkan kembali elemen video bawaan
+  const v = document.getElementById('cam-video');
+  if (v) { v.srcObject = null; v.style.display = ''; }
+
+  // Hapus elemen video yang dibuat Quagga
+  const qvid = document.querySelector('#cam-wrap video:not(#cam-video)');
+  if (qvid) qvid.remove();
+
   document.getElementById('cam-dot').classList.add('off');
-  document.getElementById('cam-txt').textContent='KAMERA TIDAK AKTIF';
-  document.getElementById('btn-start').style.display='';
-  document.getElementById('btn-stop').style.display='none';
-  document.getElementById('btn-flip').style.display='none';
-  document.getElementById('scan-line').style.animationPlayState='paused';
+  document.getElementById('cam-txt').textContent = 'KAMERA TIDAK AKTIF';
+  document.getElementById('btn-start').style.display = '';
+  document.getElementById('btn-stop').style.display  = 'none';
+  document.getElementById('btn-flip').style.display  = 'none';
+  document.getElementById('scan-line').style.animationPlayState = 'paused';
 }
 
 async function flipCamera() {
-  camFacing = camFacing==='environment'?'user':'environment';
-  if (camStream) { stopCamera(); await startCamera(); }
-}
-
-function scanFrame() {
-  if (cooldown) return;
-  const vid=document.getElementById('cam-video');
-  const cvs=document.getElementById('cam-canvas');
-  if (!vid.videoWidth) return;
-  cvs.width=vid.videoWidth; cvs.height=vid.videoHeight;
-  const ctx=cvs.getContext('2d');
-  ctx.drawImage(vid,0,0,cvs.width,cvs.height);
-  const img=ctx.getImageData(0,0,cvs.width,cvs.height);
-  const qr=jsQR(img.data,img.width,img.height,{inversionAttempts:'dontInvert'});
-  if (qr?.data) { onScanDetect(qr.data); return; }
-  const qr2=jsQR(img.data,img.width,img.height,{inversionAttempts:'onlyInvert'});
-  if (qr2?.data) onScanDetect(qr2.data);
+  camFacing = camFacing === 'environment' ? 'user' : 'environment';
+  if (quaggaRunning) { stopCamera(); startCamera(); }
 }
 
 async function onScanDetect(raw) {
   if (cooldown) return;
   cooldown = true;
-  const f=document.getElementById('scan-flash');
-  f.classList.add('lit'); setTimeout(()=>f.classList.remove('lit'),280);
+
+  const f = document.getElementById('scan-flash');
+  f.classList.add('lit'); setTimeout(() => f.classList.remove('lit'), 280);
+
   camScanned++;
-  document.getElementById('cam-count').textContent=camScanned+' SCAN';
-  let id=raw.trim();
-  try { const p=JSON.parse(raw); if(p.id) id=p.id; } catch{}
-  id=id.toUpperCase();
+  document.getElementById('cam-count').textContent = camScanned + ' SCAN';
+
+  let id = raw.trim();
+  // Coba parse JSON (untuk kompatibilitas QR lama)
+  try { const p = JSON.parse(raw); if (p.id) id = p.id; } catch {}
+  id = id.toUpperCase();
+
   await processScan(id);
-  setTimeout(()=>{ cooldown=false; },2400);
+  setTimeout(() => { cooldown = false; }, 2400);
 }
 
 /* ============================================================
