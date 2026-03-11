@@ -964,175 +964,169 @@ td.td-email { color: #94a3b8; font-size: 11px; }
   .ticket-brand { -webkit-text-fill-color: #000 !important; color: #000 !important; }
 }
 /* ================================================================
-   MULTI-ORDER / GROUP BOOKING
+   QR CODE SECTION — desain besar & mudah discan
 ================================================================ */
 
-/* Mode tabs */
-.order-mode-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.order-tab {
-  padding: 10px 8px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.04);
-  color: var(--muted);
-  border-radius: 8px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.8px;
-  cursor: pointer;
-  transition: all 0.18s;
-}
-
-.order-tab:hover {
-  background: rgba(255,255,255,0.08);
-  color: var(--text);
-}
-
-.order-tab.active {
-  background: rgba(56,189,248,0.12);
-  border-color: rgba(56,189,248,0.5);
-  color: var(--cyan);
-}
-
-.order-mode-desc {
-  font-size: 11px;
-  color: var(--muted);
-  font-family: var(--mono);
-  margin: 0 0 12px;
-  line-height: 1.6;
-}
-
-/* Group member list */
-.group-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
-  max-height: 320px;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.group-list::-webkit-scrollbar { width: 4px; }
-.group-list::-webkit-scrollbar-track { background: transparent; }
-.group-list::-webkit-scrollbar-thumb { background: rgba(56,189,248,0.3); border-radius: 4px; }
-
-/* Single member row */
-.member-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 8px;
-  align-items: center;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 8px;
-  padding: 10px 12px;
-  animation: fadeSlideIn 0.2s ease;
-}
-
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(-6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.member-row .member-name-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.member-num {
-  font-size: 9px;
-  color: var(--muted);
-  font-family: var(--mono);
-  letter-spacing: 0.5px;
-}
-
-.member-row input.sp-input {
-  padding: 7px 10px;
-  font-size: 12px;
-  height: auto;
-}
-
-/* Fast Track mini toggle per member */
-.member-ft-toggle {
+.ticket-qr-section {
   display: flex;
   align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.1);
-  background: rgba(255,255,255,0.04);
-  transition: all 0.15s;
-  white-space: nowrap;
-  font-size: 10px;
-  font-family: var(--mono);
-  color: var(--muted);
+  gap: 20px;
+  padding: 16px 0 8px;
 }
 
-.member-ft-toggle.ft-on {
-  border-color: rgba(251,191,36,0.5);
-  background: rgba(251,191,36,0.1);
-  color: #fbbf24;
+/* Wrapper QR dengan sudut dekoratif */
+.ticket-qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.member-ft-toggle input[type=checkbox] {
-  display: none;
+.qr-outer {
+  position: relative;
+  padding: 10px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 4px 20px rgba(0,0,0,0.25);
 }
 
-/* Delete member button */
-.member-del-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid rgba(239,68,68,0.3);
-  background: rgba(239,68,68,0.08);
-  color: var(--red);
-  font-size: 13px;
-  cursor: pointer;
+/* Sudut dekoratif biru di luar QR */
+.qr-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: #38bdf8;
+  border-style: solid;
+  border-radius: 2px;
+}
+.qr-tl { top: -2px; left: -2px;  border-width: 2px 0 0 2px; }
+.qr-tr { top: -2px; right: -2px; border-width: 2px 2px 0 0; }
+.qr-bl { bottom: -2px; left: -2px;  border-width: 0 0 2px 2px; }
+.qr-br { bottom: -2px; right: -2px; border-width: 0 2px 2px 0; }
+
+/* Container QR Code — ukuran besar agar mudah discan */
+.qr-container {
+  width: 160px;
+  height: 160px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-.member-del-btn:hover {
-  background: rgba(239,68,68,0.2);
-  border-color: var(--red);
 }
 
-/* Add member button */
-.add-member-btn {
-  border-style: dashed !important;
-  border-color: rgba(56,189,248,0.3) !important;
-  color: var(--cyan) !important;
-  background: rgba(56,189,248,0.05) !important;
-  font-size: 11px !important;
-}
-.add-member-btn:hover {
-  background: rgba(56,189,248,0.1) !important;
+/* Override styling dari library QRCode.js */
+.qr-container img,
+.qr-container canvas {
+  width:  160px !important;
+  height: 160px !important;
+  display: block;
+  image-rendering: pixelated; /* tajam, tidak blur */
 }
 
-/* Group summary pill */
-.group-summary {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background: rgba(56,189,248,0.06);
-  border: 1px solid rgba(56,189,248,0.2);
-  border-radius: 8px;
+.qr-scan-hint {
   font-family: var(--mono);
-  font-size: 10px;
-  color: var(--muted);
-  letter-spacing: 0.5px;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: #38bdf8;
+  text-align: center;
+  animation: pulse-hint 2s ease-in-out infinite;
 }
 
-.group-summary span {
-  color: var(--cyan);
-  font-weight: 600;
+@keyframes pulse-hint {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
 }
+
+/* Info di sebelah kanan QR */
+.ticket-qr-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.qr-info-label {
+  font-size: 8px;
+  font-family: var(--mono);
+  letter-spacing: 1.5px;
+  color: var(--muted);
+}
+
+.qr-info-id {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #38bdf8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  word-break: break-all;
+}
+
+.qr-info-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qr-info-date {
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+
+.qr-info-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.qr-rule-badge {
+  font-size: 8px;
+  font-family: var(--mono);
+  letter-spacing: 0.5px;
+  padding: 3px 7px;
+  border-radius: 20px;
+  border: 1px solid rgba(56,189,248,0.4);
+  color: #38bdf8;
+  background: rgba(56,189,248,0.08);
+}
+
+.qr-ft-badge {
+  border-color: rgba(251,191,36,0.5);
+  color: #fbbf24;
+  background: rgba(251,191,36,0.1);
+}
+
+.qr-valid-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-family: var(--mono);
+  color: #22c55e;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.qr-valid-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px #22c55e;
+  animation: blink 1.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* Hapus class lama yang tidak dipakai */
+.ticket-barcode-section { display: none; }
+.barcode-svg            { display: none; }
+.ticket-id-text         { display: none; }
