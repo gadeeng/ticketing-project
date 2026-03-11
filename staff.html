@@ -5,154 +5,160 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;800;900&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>DUFAN — Portal Petugas | Scan Tiket</title>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>DUFAN — Portal Petugas | Scan Tiket</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
-<!-- Firebase SDK -->
-<script type="module">
-import { initializeApp }                         from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
-import { getDatabase, ref, set, get, onValue }   from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js';
-
-const firebaseConfig = {
-  apiKey:            'AIzaSyDZohweBiGofXFd2HD-VH5w3BsUc2zaFqc',
-  authDomain:        'ticketing-project-3bcf6.firebaseapp.com',
-  databaseURL:       'https://ticketing-project-3bcf6-default-rtdb.asia-southeast1.firebasedatabase.app',
-  projectId:         'ticketing-project-3bcf6',
-  storageBucket:     'ticketing-project-3bcf6.firebasestorage.app',
-  messagingSenderId: '682939255204',
-  appId:             '1:682939255204:web:65d2ba7efb2baf665c5931',
-  measurementId:     'G-HME323VPJZ'
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <!-- Firebase SDK -->
+   <script type="module">
+   import { initializeApp }                         from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js';
+   import { getDatabase, ref, set, get, onValue }   from 'https://www.gstatic.com/firebasejs/12.10.0/firebase-database.js';
+   const firebaseConfig = {
+    apiKey:            'AIzaSyDZohweBiGofXFd2HD-VH5w3BsUc2zaFqc',
+    authDomain:        'ticketing-project-3bcf6.firebaseapp.com',
+    databaseURL:       'https://ticketing-project-3bcf6-default-rtdb.asia-southeast1.firebasedatabase.app',
+    projectId:         'ticketing-project-3bcf6',
+    storageBucket:     'ticketing-project-3bcf6.firebasestorage.app',
+    messagingSenderId: '682939255204',
+    appId:             '1:682939255204:web:65d2ba7efb2baf665c5931',
+    measurementId:     'G-HME323VPJZ'
 };
+  const _app = initializeApp(firebaseConfig);
+  const _db  = getDatabase(_app);
 
-const _app = initializeApp(firebaseConfig);
-const _db  = getDatabase(_app);
+  window._fbSet    = (path, data) => set(ref(_db, path), data);
+  window._fbGet    = async (path) => { const s = await get(ref(_db, path)); return s.exists() ? s.val() : null; };
+  window._fbListen = (path, cb)   => onValue(ref(_db, path), s => cb(s.exists() ? s.val() : null));
+  window._fbReady  = true;
 
-window._fbSet    = (path, data) => set(ref(_db, path), data);
-window._fbGet    = async (path) => { const s = await get(ref(_db, path)); return s.exists() ? s.val() : null; };
-window._fbListen = (path, cb)   => onValue(ref(_db, path), s => cb(s.exists() ? s.val() : null));
-window._fbReady  = true;
-
-document.dispatchEvent(new Event('firebase-ready'));
-</script>
-
-<link href="css/shared.css" rel="stylesheet"/><link href="css/staff.css" rel="stylesheet"/></head>
+  document.dispatchEvent(new Event('firebase-ready'));
+  </script>
+  <link href="css/shared.css" rel="stylesheet"/><link href="css/staff.css" rel="stylesheet"/>
+</head>
 <body>
-<div class="scan-pulse" id="scan-pulse"></div>
-<div class="toast" id="toast"><span id="t-icon">✅</span><span id="t-msg">—</span></div>
-<!-- TOPBAR -->
-<div class="topbar">
-<div class="topbar-left">
-<button class="back-btn" href="index.html" onclick="history.back()">← HOME</button>
-<div class="topbar-title">🎢 DUFAN  <span>STAFF PORTAL</span></div>
-</div>
-<div class="topbar-right">
-<div class="tb-pill cyan" id="tb-wahana">— PILIH WAHANA —</div>
-<div class="tb-pill active" id="tb-scan">0 SCAN VALID</div>
-</div>
-</div>
-<!-- ══ SCREEN 1: WAHANA PICKER ══ -->
+  <div class="scan-pulse" id="scan-pulse"></div>
+  <div class="toast" id="toast"><span id="t-icon">✅</span><span id="t-msg">—</span></div>
+  <!-- TOPBAR -->
+   <div class="topbar">
+    <div class="topbar-left">
+      <button class="back-btn" href="index.html" onclick="history.back()">← HOME</button>
+      <div class="topbar-title">🎢 DUFAN  <span>STAFF PORTAL</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="tb-pill cyan" id="tb-wahana">— PILIH WAHANA —</div>
+      <div class="tb-pill active" id="tb-scan">0 SCAN VALID</div>
+    </div>
+  </div>
+
+  <!-- ══ SCREEN 1: WAHANA PICKER ══ -->
 <div id="screen-pick">
-<div class="pick-title">PILIH WAHANA</div>
-<div class="pick-sub">Pilih wahana yang kamu jaga hari ini</div>
-<input class="pick-search" id="pick-search" oninput="filterPick(this.value)" placeholder="🔍  Cari wahana..." type="text"/>
-<div class="pick-grid" id="pick-grid"></div>
+  <div class="pick-title">PILIH WAHANA</div>
+  <div class="pick-sub">Pilih wahana yang kamu jaga hari ini</div>
+  <input class="pick-search" id="pick-search" oninput="filterPick(this.value)" placeholder="🔍  Cari wahana..." type="text"/>
+  <div class="pick-grid" id="pick-grid"></div>
 </div>
+
 <!-- ══ SCREEN 2: PORTAL ══ -->
-<div id="screen-portal">
-<!-- Wahana header -->
-<div class="wahana-header">
-<div class="wh-left">
-<div class="wh-name" id="wh-name">—</div>
-<div class="wh-zone" id="wh-zone">—</div>
-<div class="wh-meta" id="wh-meta"></div>
-</div>
-<div class="wh-right">
-<button class="change-btn" onclick="changeWahana()">↩ Ganti Wahana</button>
-</div>
-</div>
-<!-- Stats -->
-<div class="stats-row">
-<div class="stat-mini"><div class="stat-mini-num c-cyan" id="s-total">0</div><div class="stat-mini-label">Total Scan</div></div>
-<div class="stat-mini"><div class="stat-mini-num c-green" id="s-valid">0</div><div class="stat-mini-label">Valid</div></div>
-<div class="stat-mini"><div class="stat-mini-num c-red" id="s-invalid">0</div><div class="stat-mini-label">Ditolak</div></div>
-<div class="stat-mini"><div class="stat-mini-num c-amber" id="s-loaded">0</div><div class="stat-mini-label">Tiket Tersimpan</div></div>
-</div>
-<!-- Queue hero + Wahana Mulai -->
-<div class="queue-hero">
-<div class="qh-label" id="qh-label">ANTRIAN SAAT INI</div>
-<div class="qh-count" id="qh-count" style="color:var(--green)">0</div>
-<div class="qh-sublbl" id="qh-sublbl">ORANG DALAM ANTRIAN</div>
-<div class="qh-bar-bg"><div class="qh-bar" id="qh-bar" style="width:0%;background:var(--green)"></div></div>
-<div class="qh-meta">
-<span id="qh-wait">Estimasi tunggu: —</span>
-<span id="qh-cap">Kapasitas: —</span>
-</div>
-<div class="qh-status" id="qh-status" style="border-color:var(--green);color:var(--green)">ANTRIAN NORMAL</div>
-<!-- WAHANA MULAI (hanya untuk ride biasa) -->
-<div class="mulai-wrap" id="mulai-wrap">
-<button class="btn-mulai ready" id="btn-mulai" onclick="wahanaStart()">
+ <div id="screen-portal">
+  <!-- Wahana header -->
+   <div class="wahana-header">
+    <div class="wh-left">
+      <div class="wh-name" id="wh-name">—</div>
+      <div class="wh-zone" id="wh-zone">—</div>
+      <div class="wh-meta" id="wh-meta"></div>
+    </div>
+    <div class="wh-right">
+      <button class="change-btn" onclick="changeWahana()">↩ Ganti Wahana</button>
+    </div>
+  </div>
+  <!-- Stats -->
+   <div class="stats-row">
+    <div class="stat-mini"><div class="stat-mini-num c-cyan" id="s-total">0</div><div class="stat-mini-label">Total Scan</div></div>
+    <div class="stat-mini"><div class="stat-mini-num c-green" id="s-valid">0</div><div class="stat-mini-label">Valid</div></div>
+    <div class="stat-mini"><div class="stat-mini-num c-red" id="s-invalid">0</div><div class="stat-mini-label">Ditolak</div></div>
+    <div class="stat-mini"><div class="stat-mini-num c-amber" id="s-loaded">0</div><div class="stat-mini-label">Tiket Tersimpan</div></div>
+  </div>
+
+  <!-- Queue hero + Wahana Mulai -->
+   <div class="queue-hero">
+    <div class="qh-label" id="qh-label">ANTRIAN SAAT INI</div>
+    <div class="qh-count" id="qh-count" style="color:var(--green)">0</div>
+    <div class="qh-sublbl" id="qh-sublbl">ORANG DALAM ANTRIAN</div>
+    <div class="qh-bar-bg"><div class="qh-bar" id="qh-bar" style="width:0%;background:var(--green)"></div></div>
+    <div class="qh-meta">
+      <span id="qh-wait">Estimasi tunggu: —</span>
+      <span id="qh-cap">Kapasitas: —</span>
+    </div>
+    <div class="qh-status" id="qh-status" style="border-color:var(--green);color:var(--green)">ANTRIAN NORMAL</div>
+    
+    <!-- WAHANA MULAI (hanya untuk ride biasa) -->
+     <div class="mulai-wrap" id="mulai-wrap">
+      <button class="btn-mulai ready" id="btn-mulai" onclick="wahanaStart()">
         🎢   WAHANA MULAI
       </button>
-<div class="mulai-timer" id="mulai-timer">⏱ Cooldown: <span id="mulai-cd">—</span></div>
-<div class="mulai-progress" id="mulai-progress">
-<div class="mulai-progress-fill" id="mulai-progress-fill" style="width:100%"></div>
-</div>
-</div>
-<!-- WALK-THROUGH EXIT (hanya untuk wahana berkelanjutan) -->
-<div class="wt-exit-wrap" id="wt-exit-wrap">
-<div class="wt-counter-row">
-<div class="wt-counter-card">
-<div class="wt-counter-num c-green" id="wt-in">0</div>
-<div class="wt-counter-lbl">TOTAL MASUK</div>
-</div>
-<div class="wt-counter-card">
-<div class="wt-counter-num c-amber" id="wt-out">0</div>
-<div class="wt-counter-lbl">TOTAL KELUAR</div>
-</div>
-</div>
-<a class="btn-open-exit" href="#" id="btn-open-exit" style="margin-top:10px" target="_blank">
+      <div class="mulai-timer" id="mulai-timer">⏱ Cooldown: <span id="mulai-cd">—</span></div>
+      <div class="mulai-progress" id="mulai-progress">
+        <div class="mulai-progress-fill" id="mulai-progress-fill" style="width:100%"></div>
+      </div>
+    </div>
+    <!-- WALK-THROUGH EXIT (hanya untuk wahana berkelanjutan) -->
+     <div class="wt-exit-wrap" id="wt-exit-wrap">
+      <div class="wt-counter-row">
+        <div class="wt-counter-card">
+          <div class="wt-counter-num c-green" id="wt-in">0</div>
+          <div class="wt-counter-lbl">TOTAL MASUK</div>
+        </div>
+        <div class="wt-counter-card">
+          <div class="wt-counter-num c-amber" id="wt-out">0</div>
+          <div class="wt-counter-lbl">TOTAL KELUAR</div>
+        </div>
+      </div>
+      <a class="btn-open-exit" href="#" id="btn-open-exit" style="margin-top:10px" target="_blank">
         🖥️  BUKA HALAMAN PINTU KELUAR
       </a>
-</div>
-</div>
-<!-- 3-col grid -->
-<div class="main-grid">
-<!-- COL 1: SCANNER -->
-<div class="panel">
-<div class="mode-tabs">
-<button class="mode-tab active" id="tab-cam" onclick="switchTab('cam')">📷 KAMERA</button>
-<button class="mode-tab" id="tab-man" onclick="switchTab('man')">⌨️ MANUAL</button>
-</div>
-<!-- Camera pane -->
-<div class="tab-pane active" id="pane-cam">
-<div class="sec">KAMERA SCANNER</div>
-<div class="cam-wrap" id="cam-wrap">
-<video autoplay="" id="cam-video" muted="" playsinline=""></video>
-<canvas id="cam-canvas"></canvas>
-<div class="scan-overlay">
-<div class="scan-frame">
-<div class="sc-br"></div><div class="sc-bl"></div>
-<div class="scan-line" id="scan-line"></div>
-</div>
-</div>
-<div class="scan-flash" id="scan-flash"></div>
-<div class="cam-scan-count" id="cam-count">0 SCAN</div>
-<div class="cam-bar">
-<div class="cam-dot off" id="cam-dot"></div>
-<span id="cam-txt">KAMERA TIDAK AKTIF</span>
-</div>
-</div>
-<div class="btn-row2" style="margin-top:10px">
-<button class="sp-btn primary" id="btn-start" onclick="startCamera()">📷 AKTIFKAN</button>
-<button class="sp-btn danger" id="btn-stop" onclick="stopCamera()" style="display:none">⬛ STOP</button>
-</div>
-<button class="sp-btn" id="btn-flip" onclick="flipCamera()" style="display:none;margin-top:8px">🔄 GANTI KAMERA</button>
-<p style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:10px;text-align:center;letter-spacing:.5px">
+    </div>
+  </div>
+
+
+  <!-- 3-col grid -->
+ <div class="main-grid">
+
+  <!-- COL 1: SCANNER -->
+ <div class="panel">
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tab-cam" onclick="switchTab('cam')">📷 KAMERA</button>
+    <button class="mode-tab" id="tab-man" onclick="switchTab('man')">⌨️ MANUAL</button>
+  </div>
+
+  <!-- Camera pane -->
+   <div class="tab-pane active" id="pane-cam">
+    <div class="sec">KAMERA SCANNER</div>
+    <div class="cam-wrap" id="cam-wrap">
+      <video autoplay="" id="cam-video" muted="" playsinline=""></video>
+      <canvas id="cam-canvas"></canvas>
+      <div class="scan-overlay">
+        <div class="scan-frame">
+          <div class="sc-br"></div><div class="sc-bl"></div>
+          <div class="scan-line" id="scan-line"></div>
+        </div>
+      </div>
+      <div class="scan-flash" id="scan-flash"></div>
+      <div class="cam-scan-count" id="cam-count">0 SCAN</div>
+      <div class="cam-bar">
+        <div class="cam-dot off" id="cam-dot"></div>
+        <span id="cam-txt">KAMERA TIDAK AKTIF</span>
+      </div>
+    </div>
+    <div class="btn-row2" style="margin-top:10px">
+      <button class="sp-btn primary" id="btn-start" onclick="startCamera()">📷 AKTIFKAN</button>
+      <button class="sp-btn danger" id="btn-stop" onclick="stopCamera()" style="display:none">⬛ STOP</button>
+    </div>
+    <button class="sp-btn" id="btn-flip" onclick="flipCamera()" style="display:none;margin-top:8px">🔄 GANTI KAMERA</button>
+    <p style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:10px;text-align:center;letter-spacing:.5px">
           Arahkan ke barcode / QR tiket. Scan otomatis.
         </p>
-</div>
+      </div>
 <!-- Manual pane -->
 <div class="tab-pane" id="pane-man">
 <div class="sec">NOMOR TIKET</div>

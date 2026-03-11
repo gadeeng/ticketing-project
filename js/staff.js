@@ -47,11 +47,12 @@ let curWahana   = null;
 let totalScan=0, validScan=0, invalidScan=0;
 
 // Camera
-let camStream   = null;
-let camFacing   = 'environment';
-let quaggaRunning = false;
-let cooldown    = false;
-let camScanned  = 0;
+let camStream      = null;
+let camFacing      = 'environment';
+let camRunning     = false;
+let camAnimFrame   = null;
+let cooldown       = false;
+let camScanned     = 0;
 
 // Wahana Mulai cooldown
 let mulaiTimer    = null;
@@ -516,110 +517,99 @@ async function processManual() {
 }
 
 /* ============================================================
-   CAMERA — QuaggaJS (Barcode 1D + QR fallback)
+   CAMERA — jsQR (QR Code scanner)
 ============================================================ */
-function startCamera() {
+async function startCamera() {
   if (!curWahana) { showToast('error','⚠️','Pilih wahana sebelum mengaktifkan kamera!'); return; }
-  if (quaggaRunning) return;
+  if (camRunning) return;
 
-  // Pastikan Quagga sudah loaded
-  if (typeof Quagga === 'undefined') {
-    showToast('error','🚫','Library Quagga belum dimuat — refresh halaman');
+  // Pastikan jsQR sudah loaded
+  if (typeof jsQR === 'undefined') {
+    showToast('error','🚫','Library jsQR belum dimuat — refresh halaman');
     return;
   }
 
-  Quagga.init({
-    inputStream: {
-      name: 'Live',
-      type: 'LiveStream',
-      target: document.getElementById('cam-video').parentElement,
-      constraints: {
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: {
         facingMode: camFacing,
         width:  { ideal: 1280 },
         height: { ideal: 720 },
-      },
-    },
-    locator: { patchSize: 'medium', halfSample: true },
-    numOfWorkers: navigator.hardwareConcurrency > 2 ? 2 : 1,
-    frequency: 10,
-    decoder: {
-      // Format barcode 1D yang umum dipakai di gelang tiket
-      readers: [
-        'code_128_reader',   // paling umum untuk tiket
-        'code_39_reader',
-        'ean_13_reader',
-        'ean_8_reader',
-        'upc_reader',
-        'codabar_reader',
-        'i2of5_reader',
-      ],
-    },
-    locate: true,
-  }, err => {
-    if (err) {
-      let m = 'Gagal mengakses kamera';
-      if (String(err).includes('Permission')) m = 'Izin kamera ditolak — aktifkan di pengaturan browser';
-      if (String(err).includes('device'))     m = 'Kamera tidak ditemukan';
-      showToast('error','🚫', m);
-      console.error('Quagga init error:', err);
-      return;
-    }
-    Quagga.start();
-    quaggaRunning = true;
+      }
+    });
+  } catch (err) {
+    let m = 'Gagal mengakses kamera';
+    if (String(err).includes('Permission') || String(err).includes('NotAllowed'))
+      m = 'Izin kamera ditolak — aktifkan di pengaturan browser';
+    else if (String(err).includes('NotFound') || String(err).includes('device'))
+      m = 'Kamera tidak ditemukan';
+    showToast('error','🚫', m);
+    console.error('Camera error:', err);
+    return;
+  }
 
-    // Sembunyikan elemen video bawaan — Quagga buat sendiri
-    const v = document.getElementById('cam-video');
-    if (v) v.style.display = 'none';
+  const video  = document.getElementById('cam-video');
+  const canvas = document.getElementById('cam-canvas');
 
-    document.getElementById('cam-dot').classList.remove('off');
-    document.getElementById('cam-txt').textContent = 'AKTIF — MENDETEKSI BARCODE GELANG...';
-    document.getElementById('btn-start').style.display = 'none';
-    document.getElementById('btn-stop').style.display  = '';
-    document.getElementById('btn-flip').style.display  = '';
-    document.getElementById('scan-line').style.animationPlayState = 'running';
-    showToast('success','📷','Kamera aktif — siap scan barcode gelang');
-  });
+  video.srcObject = camStream;
+  await video.play();
 
-  // Handler hasil deteksi barcode
-  Quagga.onDetected(result => {
-    const code = result?.codeResult?.code;
-    if (code) onScanDetect(code);
-  });
+  camRunning = true;
 
-  // Gambar kotak deteksi barcode di canvas overlay
-  Quagga.onProcessed(result => {
-    const cvs = document.getElementById('cam-canvas');
-    const drawCtx = cvs && cvs.getContext('2d');
-    if (!drawCtx || !result) return;
-    drawCtx.clearRect(0, 0, cvs.width, cvs.height);
-    if (result.boxes) {
-      result.boxes.filter(b => b !== result.box).forEach(box => {
-        Quagga.ImageDebug.drawPath(box, {x:0,y:1}, drawCtx, {color:'rgba(56,189,248,0.3)', lineWidth:2});
+  document.getElementById('cam-dot').classList.remove('off');
+  document.getElementById('cam-txt').textContent = 'AKTIF — MENDETEKSI QR CODE...';
+  document.getElementById('btn-start').style.display = 'none';
+  document.getElementById('btn-stop').style.display  = '';
+  document.getElementById('btn-flip').style.display  = '';
+  document.getElementById('scan-line').style.animationPlayState = 'running';
+  showToast('success','📷','Kamera aktif — siap scan QR Code tiket');
+
+  // Loop scan frame-by-frame dengan jsQR
+  function scanFrame() {
+    if (!camRunning) return;
+
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      const ctx = canvas.getContext('2d');
+      canvas.width  = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'dontInvert',
       });
+
+      if (code) {
+        // Gambar kotak highlight di sekitar QR yang terdeteksi
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth   = 3;
+        ctx.beginPath();
+        ctx.moveTo(code.location.topLeftCorner.x,     code.location.topLeftCorner.y);
+        ctx.lineTo(code.location.topRightCorner.x,    code.location.topRightCorner.y);
+        ctx.lineTo(code.location.bottomRightCorner.x, code.location.bottomRightCorner.y);
+        ctx.lineTo(code.location.bottomLeftCorner.x,  code.location.bottomLeftCorner.y);
+        ctx.closePath();
+        ctx.stroke();
+
+        onScanDetect(code.data);
+      }
     }
-    if (result.box) {
-      Quagga.ImageDebug.drawPath(result.box, {x:0,y:1}, drawCtx, {color:'#38bdf8', lineWidth:2});
-    }
-    if (result.codeResult?.code) {
-      Quagga.ImageDebug.drawPath(result.line, {x:'x',y:'y'}, drawCtx, {color:'#22c55e', lineWidth:3});
-    }
-  });
+
+    camAnimFrame = requestAnimationFrame(scanFrame);
+  }
+
+  camAnimFrame = requestAnimationFrame(scanFrame);
 }
 
 function stopCamera() {
-  if (quaggaRunning && typeof Quagga !== 'undefined') {
-    Quagga.stop();
-    quaggaRunning = false;
-  }
-  if (camStream) { camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
+  camRunning = false;
+  if (camAnimFrame) { cancelAnimationFrame(camAnimFrame); camAnimFrame = null; }
+  if (camStream)    { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
 
-  // Tampilkan kembali elemen video bawaan
-  const v = document.getElementById('cam-video');
-  if (v) { v.srcObject = null; v.style.display = ''; }
-
-  // Hapus elemen video yang dibuat Quagga
-  const qvid = document.querySelector('#cam-wrap video:not(#cam-video)');
-  if (qvid) qvid.remove();
+  const video  = document.getElementById('cam-video');
+  const canvas = document.getElementById('cam-canvas');
+  if (video)  { video.srcObject = null; }
+  if (canvas) { const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width,canvas.height); }
 
   document.getElementById('cam-dot').classList.add('off');
   document.getElementById('cam-txt').textContent = 'KAMERA TIDAK AKTIF';
@@ -631,7 +621,7 @@ function stopCamera() {
 
 async function flipCamera() {
   camFacing = camFacing === 'environment' ? 'user' : 'environment';
-  if (quaggaRunning) { stopCamera(); startCamera(); }
+  if (camRunning) { stopCamera(); await startCamera(); }
 }
 
 async function onScanDetect(raw) {
