@@ -169,4 +169,4 @@ Kedua project menggunakan **satu Firebase project yang sama**, sehingga tiket ya
 
 ## 👥 Tim
 
-**Tim Sayang Lomba Sayangg** — © 2026 DUFAN · Taman Impian Jaya Ancol
+**Tim Sayang Lomba Sayangg** — © 2026
