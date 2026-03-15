@@ -399,17 +399,30 @@ function validateTicket(raw) {
   if (!ticket) ticket = ticketStore.find(t=>id.includes(t.id)||t.id.includes(id));
   if (!ticket) return { ok:false, msg:'Tiket tidak ditemukan dalam sistem', id };
 
-  if (scanned.has(ticket.id))
-    return { ok:false, msg:'Tiket sudah digunakan hari ini', ticket };
-
-  if (ticket.status === 'USED')
-    return { ok:false, msg:`Tiket sudah dipakai di: ${ticket.usedWahana||'—'}`, ticket };
-  if (ticket.status === 'EXPIRED')
+  // Cek EXPIRED (status eksplisit dari DB, atau tanggal sudah lewat)
+  const today = new Date().toISOString().slice(0,10);
+  if (ticket.status === 'EXPIRED' || (ticket.date && ticket.date < today))
     return { ok:false, msg:'Tiket sudah kadaluarsa', ticket };
 
-  const today = new Date().toISOString().slice(0,10);
+  // Cek tanggal kunjungan — harus hari ini
   if (ticket.date && ticket.date !== today)
     return { ok:false, msg:`Tiket hanya berlaku ${ticket.date}`, ticket };
+
+  // Cek apakah sudah scan wahana yang SAMA hari ini (boleh wahana lain)
+  const logs = ticket.usageLog ? Object.values(ticket.usageLog) : [];
+  const todayLogs = logs.filter(l => l.timestamp && l.timestamp.slice(0,10) === today);
+  const alreadyThisRide = curWahana && todayLogs.some(l => l.rideId === curWahana.id);
+  if (alreadyThisRide) {
+    const lastTime = todayLogs
+      .filter(l => l.rideId === curWahana.id)
+      .sort((a,b) => new Date(b.timestamp)-new Date(a.timestamp))[0];
+    const t = lastTime ? new Date(lastTime.timestamp).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}) : '—';
+    return { ok:false, msg:`Tiket sudah dipakai di ${curWahana.name} hari ini (${t})`, ticket };
+  }
+
+  // Cek sesi kamera lokal (cooldown antar-wahana berbeda dalam satu sesi)
+  if (scanned.has(ticket.id + '_' + (curWahana?.id||'')))
+    return { ok:false, msg:'Tiket baru saja di-scan untuk wahana ini', ticket };
 
   // Jam operasional
   if (curWahana && !isOpen(curWahana)) {
@@ -455,11 +468,23 @@ async function processScan(raw) {
       }
     }
 
-    t.status     = 'USED';
-    t.usedAt     = new Date().toISOString();
-    t.usedWahana = curWahana.name;
-    scanned.add(t.id);
-    await saveTicketStore();
+    // ── Push usageLog ke Firebase (tidak ubah status) ──
+    const logEntry = {
+      rideId:    curWahana.id,
+      rideName:  curWahana.name,
+      timestamp: new Date().toISOString(),
+    };
+    const logKey = Date.now() + '_' + Math.random().toString(36).slice(2,6);
+    try {
+      await window._fbSet(`tickets/${t.id}/usageLog/${logKey}`, logEntry);
+    } catch(e) { console.warn('usageLog write failed:', e.message); }
+
+    // Update local ticketStore agar sesi ini konsisten
+    if (!t.usageLog) t.usageLog = {};
+    t.usageLog[logKey] = logEntry;
+
+    // Tandai di Set lokal pakai kombinasi tiketId+wahanaId (bukan hanya tiketId)
+    scanned.add(t.id + '_' + curWahana.id);
 
     if (curWahana.walkthrough) {
       // Walk-through: increment counter masuk
@@ -483,10 +508,13 @@ async function processScan(raw) {
       updateQueueDisplay();
       flashPulse(true);
       showResult('valid', t);
+      const useCount = Object.values(t.usageLog).filter(l=>l.timestamp?.slice(0,10)===new Date().toISOString().slice(0,10)).length;
       addLog(
         isFT ? 'fasttrack' : 'success',
         curWahana.name, t.id,
-        isFT ? `⚡ FAST TRACK — ${t.name} masuk antrian prioritas` : `${t.name} masuk antrian`
+        isFT
+          ? `⚡ FAST TRACK — ${t.name} masuk antrian prioritas (pemakaian ke-${useCount})`
+          : `${t.name} masuk antrian (pemakaian ke-${useCount})`
       );
       showToast('success', isFT?'⚡':'✅',
         isFT ? `FAST TRACK: ${t.name} → ${curWahana.name}` : `${t.name} → ${curWahana.name} (+1)`
@@ -665,11 +693,16 @@ function showResult(type, ticket, rawId, errMsg) {
   }
 
   if (ticket) {
+    const today = new Date().toISOString().slice(0,10);
+    const logs  = ticket.usageLog ? Object.values(ticket.usageLog) : [];
+    const useCount = logs.filter(l=>l.timestamp?.slice(0,10)===today).length;
     document.getElementById('v-id').textContent   = ticket.id||rawId||'—';
     document.getElementById('v-name').textContent = type!=='valid'&&errMsg ? errMsg : (ticket.name||'—');
     document.getElementById('v-type').textContent = ticket.fastTrack?'⚡ FAST TRACK':'🎟️ REGULAR';
     document.getElementById('v-date').textContent = ticket.date||'—';
-    document.getElementById('v-used').textContent = ticket.usedWahana||(type==='valid'?curWahana?.name:'—');
+    document.getElementById('v-used').textContent = type==='valid'
+      ? `${curWahana?.name||'—'} (pemakaian ke-${useCount})`
+      : (useCount > 0 ? `${useCount}x dipakai hari ini` : '—');
   } else {
     document.getElementById('v-id').textContent   = rawId||'—';
     document.getElementById('v-name').textContent = errMsg||'—';
